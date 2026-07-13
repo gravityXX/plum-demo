@@ -131,11 +131,10 @@ html.motion .scene.no-gl.scene--scrub .scene__pin{position:relative;min-height:1
 html.no-webgl .scene--scrub{height:auto}
 html.no-webgl .scene--scrub .scene__pin{position:relative;min-height:100svh;height:auto}
 
-/* Waski ekran (telefon): sceny pelnoekranowe zamiast wpuszczonych kart (tylko uklad). Rozmiary tekstu skaluja sie plynnie przez clamp, nie tutaj. */
+/* Waski ekran (telefon): sceny zostaja wpuszczonymi kartami jak na desktopie (zaokraglone rogi, cien, margines 90vw z linii 110), tylko z mniejszymi odstepami i pinem pod naglowkiem. Rozmiary tekstu skaluja sie plynnie przez clamp, nie tutaj. */
 @media (max-width:47.99rem){
-  .scene--scrub{margin-block:var(--space-lg)}
-  .scene--scrub .scene__pin{max-width:none;margin-inline:0;border-radius:0;box-shadow:none}
-  html.motion .scene--scrub .scene__pin{top:var(--size-header);height:calc(100svh - var(--size-header))}
+  .scene--scrub{margin-block:var(--space-2xl)}
+  html.motion .scene--scrub .scene__pin{top:calc(var(--size-header) + var(--space-sm));height:calc(100svh - var(--size-header) - var(--space-lg))}
   .scene__kicker{margin-bottom:var(--space-xs)}
   .scene__text{padding-bottom:var(--space-2xl)}
 }
