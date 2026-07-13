@@ -125,6 +125,18 @@ html.motion .scene.no-gl.scene--scrub .scene__pin{position:relative;min-height:1
 html.no-webgl .scene--scrub{height:auto}
 html.no-webgl .scene--scrub .scene__pin{position:relative;min-height:100svh;height:auto}
 
+/* Waski ekran (telefon): sceny pelnoekranowe zamiast wpuszczonych kart + wiekszy, czytelny tekst. Desktop bez zmian. */
+@media (max-width:47.99rem){
+  .scene--scrub{margin-block:var(--space-lg)}
+  .scene--scrub .scene__pin{max-width:none;margin-inline:0;border-radius:0;box-shadow:none}
+  html.motion .scene--scrub .scene__pin{top:var(--size-header);height:calc(100svh - var(--size-header))}
+  .scene--center .scene__title{font-size:3rem}
+  .scene__title{font-size:2.3rem}
+  .scene__lead{font-size:1.2rem}
+  .scene__kicker{font-size:.82rem;margin-bottom:var(--space-xs)}
+  .scene__text{padding-bottom:var(--space-2xl)}
+}
+
 .scene__static{background:
   radial-gradient(42% 34% at 50% 32%,var(--sf-glow,rgba(217,160,91,.55)),rgba(217,160,91,0) 72%),
   radial-gradient(120% 90% at 50% 120%,var(--sf-bot,#160f1c),transparent 60%),
