@@ -319,7 +319,7 @@ html.cursor-on.cursor-press .cursor{background:rgba(217,160,91,.20)}
 .reg-dark[data-scene="dziurawiec"] .scene__kicker{color:#D1A552}
 .footer-origin{font-family:var(--font-family-display);font-style:italic;color:var(--color-accent-warm-on-light);margin-bottom:var(--space-md)}
 
-/* --- Router: strony home / linia / newsletter (hash) --- */
+/* --- Router: strony home / linia / lista (hash) --- */
 .page{display:none}
 [data-page="home"]{display:block}
 html.js .page{display:none}
@@ -353,7 +353,7 @@ html.js .page.is-active{display:block}
   <a class="brand" href="#home">Plum.</a>
   <nav class="site-nav" aria-label="Główna">
     <a href="#linia">Linia</a>
-    <a href="#newsletter">Newsletter</a>
+    <a href="#lista">Lista oczekujących</a>
     <button type="button" class="motion-toggle" id="motionToggle" aria-pressed="false">Zatrzymaj ruch</button>
   </nav>
 </header>
@@ -369,7 +369,7 @@ html.js .page.is-active{display:block}
           <p class="scene__kicker">Prosto z Polski</p>
           <h1 class="scene__title">Rytuał, który domyka dzień.</h1>
           <p class="scene__lead sub">Prasowane serum nocne. Cały wieczorny finał pielęgnacji w jednym geście.</p>
-          <a class="cta" href="#newsletter">Zapisz się na newsletter</a>
+          <a class="cta" href="#lista">Dołącz do listy pierwszej partii</a>
         </div>
       </div>
     </div>
@@ -419,7 +419,7 @@ html.js .page.is-active{display:block}
           <p class="scene__kicker">Serum nocne</p>
           <h2 class="scene__title">Trzy krajobrazy stają się jednym gestem.</h2>
           <p class="scene__lead sub">Prasowane serum nocne. Topnieje w dotyku i wspiera naturalny proces regeneracji skóry.</p>
-          <a class="cta" href="#linia">Zobacz całą linię</a>
+          <a class="cta" href="#produkt-nocne">Poznaj całą opowieść</a>
         </div>
       </div>
     </div>
@@ -430,25 +430,25 @@ html.js .page.is-active{display:block}
     <section class="flow reg-light">
       <div class="flow__inner">
         <p class="eyebrow">Linia</p>
-        <h2>Cała linia Plum.</h2>
-        <p class="sub">Trzy gesty jednego rytuału. Każdy produkt otwiera własną opowieść.</p>
+        <h2>To nie jeden produkt. To rytuał.</h2>
         <ul class="products">
           <li><a href="#produkt-nocne"><span class="products__name">Prasowane serum nocne</span><span class="products__desc">Wieczorny finał pielęgnacji w jednym geście.</span></a></li>
-          <li><a href="#produkt-dzienne"><span class="products__name">Prasowane serum dzienne</span><span class="products__desc">Poranny gest, który zostaje na cały dzień.</span></a></li>
-          <li><a href="#produkt-tonik"><span class="products__name">Tonik</span><span class="products__desc">Pierwszy takt rytuału: woda, potem olej.</span></a></li>
+          <li><a href="#produkt-dzienne"><span class="products__name">Prasowane serum dzienne</span><span class="products__desc">Prasowane serum dzienne, na poranek.</span></a></li>
+          <li><a href="#produkt-tonik"><span class="products__name">Tonik</span><span class="products__desc">Tonik: pierwszy takt rytuału woda-potem-olej.</span></a></li>
         </ul>
-        <p class="soon">Opowieści produktów otwierają się wkrótce.</p>
+        <p class="soon">Ich opowieści otwierają się wkrótce.</p>
       </div>
     </section>
   </div>
 
-  <div class="page" data-page="newsletter">
+  <div class="page" data-page="lista">
     <section class="waitlist reg-light" style="min-height:62svh">
       <div class="waitlist__inner">
-        <p class="eyebrow">Newsletter</p>
-        <h2>Pierwsza partia będzie mała. Drzwi zostają otwarte.</h2>
-        <p class="sub">Zapisz się, a dowiesz się pierwszy.</p>
-        <a class="cta" href="#newsletter">Zapisz się</a>
+        <p class="eyebrow">Lista oczekujących</p>
+        <h2>Pierwsza partia będzie mała. Lista ma pierwszeństwo.</h2>
+        <p class="sub">Nie obiecujemy procentów. Obiecujemy skład, który rozumiesz, i rytuał, który poczujesz.</p>
+        <a class="cta" href="#lista">Dołącz do listy pierwszej partii</a>
+        <p class="soon">To pokaz. Formularz ożyje razem z pierwszą partią.</p>
       </div>
     </section>
   </div>
@@ -469,7 +469,7 @@ html.js .page.is-active{display:block}
         </ul>
         <h3 class="chapter">Tekstura i rytuał</h3>
         <p>Opuszek naciska matową powierzchnię. Materia topnieje w kroplę i ciągnie się za palcem świetlistą smugą. Dwa takty wieczoru: tonik (woda osiada na skórze), potem serum (olej domyka wieczór spokojnym połyskiem).</p>
-        <p style="margin-top:var(--space-2xl)"><a class="cta" href="#newsletter">Zapisz się na newsletter</a></p>
+        <p style="margin-top:var(--space-2xl)"><a class="cta" href="#lista">Dołącz do listy pierwszej partii</a></p>
         <p style="margin-top:var(--space-md)"><a class="cta" href="#linia">Wróć do linii</a></p>
       </div>
     </article>
@@ -514,7 +514,7 @@ html.js .page.is-active{display:block}
 (function(){
 "use strict";
 var root=document.documentElement;root.classList.add("js");
-// Router: strony home / linia / newsletter (hash).
+// Router: strony home / linia / lista (hash).
 (function(){var pages=document.querySelectorAll("[data-page]");if(!pages.length)return;
   function show(name){var found=false;for(var i=0;i<pages.length;i++){var on=pages[i].getAttribute("data-page")===name;pages[i].classList.toggle("is-active",on);if(on)found=true;}if(!found)for(var j=0;j<pages.length;j++)pages[j].classList.toggle("is-active",pages[j].getAttribute("data-page")==="home");try{window.scrollTo(0,0);}catch(e){}}
   function route(){show((location.hash||"").replace(/^#\/?/,"")||"home");}
