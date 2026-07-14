@@ -1,6 +1,6 @@
-# PLUM - demo strony
+# Plum. - demo strony
 
-Interaktywne, samowystarczalne demo strony marki PLUM (scroll-driven, symulacje skladnikow w WebGL, ciepla typografia Bodoni). Jeden plik HTML, zero requestow sieciowych.
+Interaktywne, samowystarczalne demo strony marki Plum. (scroll-driven, symulacje skladnikow w WebGL, ciepla typografia Bodoni). Jeden plik HTML, zero requestow sieciowych.
 
 Podglad na zywo: https://gravityxx.github.io/plum-demo/
 
