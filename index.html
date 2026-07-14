@@ -505,10 +505,15 @@ var mm=(window.matchMedia)?function(q){try{return window.matchMedia(q).matches;}
 var finePointer=mm("(pointer: fine)");
 var smallScreen=mm("(max-width: 767.98px)");
 var lowMem=((navigator.deviceMemory&&navigator.deviceMemory<=4)||smallScreen);
+var reduce=mm("(prefers-reduced-motion: reduce)");
 var probe=document.createElement("canvas");
 var hasGL=!!(probe.getContext("webgl")||probe.getContext("experimental-webgl"));
-// Symulacja domyslnie wlaczona; fallback tylko przy braku WebGL, plus low-memory-mobile (DPR).
+// Trzy jawne galezie degradacji (wymagania.md, WCAG 2.2 AA): reduced-motion, brak-WebGL, low-memory-mobile.
+// reduced-motion i brak-WebGL prowadza do tej samej sciezki: klasa "motion" nie jest dodawana,
+// wiec .scene__canvas zostaje display:none, .scene__static jest widoczny, tory scrub sie nie rozwijaja,
+// zero rAF i zero smooth-scrollu. Pelna tresc pozostaje w DOM.
 if(!hasGL)root.classList.add("no-webgl");
+if(reduce)root.classList.add("reduced");
 if(lowMem)root.classList.add("lowmem");
 // Zero-network monitor Web Vitals (RUM-lite): tylko console.info, nic nie wysyla.
 if(window.PerformanceObserver){
@@ -519,11 +524,14 @@ if(window.PerformanceObserver){
 // Intro / choreografia ladowania (usuwa sie sama).
 (function(){var el=document.querySelector(".intro");if(!el)return;
   function done(){root.classList.add("intro-done");window.setTimeout(function(){if(el&&el.parentNode)el.parentNode.removeChild(el);},700);}
+  // reduced-motion: zero choreografii. Overlay musi jednak zniknac (html.js .intro to fixed inset:0),
+  // wiec usuwamy go natychmiast zamiast animowac.
+  if(reduce){if(el.parentNode)el.parentNode.removeChild(el);return;}
   root.classList.add("intro-run");var t=window.setTimeout(done,1300);
   window.addEventListener("load",function(){window.clearTimeout(t);window.setTimeout(done,900);},{once:true});
 })();
-// Kursor sygnaturowy (dyskretny pierscien; tylko wskaznik precyzyjny).
-if(finePointer){
+// Kursor sygnaturowy (dyskretny pierscien; tylko wskaznik precyzyjny, poza reduced-motion).
+if(finePointer&&!reduce){
   var cur=document.createElement("div");cur.className="cursor";cur.setAttribute("aria-hidden","true");document.body.appendChild(cur);
   var cx=window.innerWidth/2,cy=window.innerHeight/2,tx=cx,ty=cy,shown=false;
   window.addEventListener("pointermove",function(e){tx=e.clientX;ty=e.clientY;if(!shown){shown=true;root.classList.add("cursor-on");}},{passive:true});
@@ -532,7 +540,9 @@ if(finePointer){
   document.addEventListener("mouseover",function(e){var t=e.target;var hot=!!(t&&t.closest&&t.closest("a,button,input,label"));root.classList.toggle("cursor-hot",hot);});
   (function loop(){cx+=(tx-cx)*0.18;cy+=(ty-cy)*0.18;cur.style.transform="translate("+cx.toFixed(1)+"px,"+cy.toFixed(1)+"px)";requestAnimationFrame(loop);})();
 }
-if(!hasGL){return;}
+// Galaz reduced-motion konczy sie tu, razem z galezia brak-WebGL: bez klasy "motion" strona
+// zostaje statycznym, w pelni czytelnym dokumentem (kadry .scene__static + caly tekst).
+if(!hasGL||reduce){return;}
 root.classList.add("motion");
 var csanim=!!(window.CSS&&CSS.supports&&CSS.supports("animation-timeline: view()"));
 if(csanim)root.classList.add("csanim");
