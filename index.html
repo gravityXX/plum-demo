@@ -91,6 +91,15 @@ a{color:inherit}
   letter-spacing:var(--font-tracking-caps);text-transform:uppercase;min-height:var(--size-target-min);
   display:inline-flex;align-items:center;transition:color var(--duration-micro) var(--ease-out)}
 .site-nav a:hover{color:var(--color-link-on-light)}
+/* Kontrolka zatrzymania ruchu (WCAG 2.2.2). Bez JS nie ma ruchu, wiec i kontrolka jest zbedna. */
+.motion-toggle{display:none}
+html.js .motion-toggle{display:inline-flex;align-items:center;min-height:var(--size-target-min);
+  background:none;border:0;padding:0;cursor:pointer;font:inherit;
+  color:var(--color-text-secondary-on-light);font-size:var(--font-size-micro);
+  letter-spacing:var(--font-tracking-caps);text-transform:uppercase;
+  transition:color var(--duration-micro) var(--ease-out)}
+html.js .motion-toggle:hover{color:var(--color-link-on-light)}
+html.no-webgl .motion-toggle{display:none}
 @media (max-width:29.99rem){.site-nav a span{display:none}}
 
 .reg-dark{background:var(--color-bg-dark);color:var(--color-text-primary-on-dark)}
@@ -130,13 +139,14 @@ html.motion .scene.no-gl.scene--scrub{height:auto}
 html.motion .scene.no-gl.scene--scrub .scene__pin{position:relative;min-height:100svh;height:auto}
 html.no-webgl .scene--scrub{height:auto}
 html.no-webgl .scene--scrub .scene__pin{position:relative;min-height:100svh;height:auto}
-/* reduced-motion: "zamrozona klatka". Shader renderuje sie RAZ i zastyga, wiec widz dostaje
-   pelne malarstwo sceny zamiast ubogiego gradientu; zero ruchu, zero scrubbingu, zero uplywu czasu.
+/* Tryb "zatrzymany ruch" (wybor uzytkownika, kontrolka w headerze; WCAG 2.2.2 Pause/Stop/Hide).
+   Shader renderuje sie RAZ i zastyga, wiec widz dostaje pelne malarstwo sceny zamiast ubogiego
+   gradientu; zero ruchu, zero scrubbingu, zero uplywu czasu.
    Kryterium art_direction: zatrzymana klatka ma czytac sie jak wydruk galeryjny. */
-html.reduced .scene__canvas{display:block}
-html.reduced .scene__static{display:none}
-html.reduced .scene.no-gl .scene__canvas{display:none}
-html.reduced .scene.no-gl .scene__static{display:block}
+html.still .scene__canvas{display:block}
+html.still .scene__static{display:none}
+html.still .scene.no-gl .scene__canvas{display:none}
+html.still .scene.no-gl .scene__static{display:block}
 
 /* Waski ekran (telefon): sceny zostaja wpuszczonymi kartami jak na desktopie (zaokraglone rogi, cien, margines 90vw z linii 110), tylko z mniejszymi odstepami i pinem pod naglowkiem. Rozmiary tekstu skaluja sie plynnie przez clamp, nie tutaj. */
 @media (max-width:47.99rem){
@@ -344,6 +354,7 @@ html.js .page.is-active{display:block}
   <nav class="site-nav" aria-label="Główna">
     <a href="#linia">Linia</a>
     <a href="#newsletter">Newsletter</a>
+    <button type="button" class="motion-toggle" id="motionToggle" aria-pressed="false">Zatrzymaj ruch</button>
   </nav>
 </header>
 
@@ -512,15 +523,18 @@ var mm=(window.matchMedia)?function(q){try{return window.matchMedia(q).matches;}
 var finePointer=mm("(pointer: fine)");
 var smallScreen=mm("(max-width: 767.98px)");
 var lowMem=((navigator.deviceMemory&&navigator.deviceMemory<=4)||smallScreen);
-var reduce=mm("(prefers-reduced-motion: reduce)");
 var probe=document.createElement("canvas");
 var hasGL=!!(probe.getContext("webgl")||probe.getContext("experimental-webgl"));
-// Trzy jawne galezie degradacji (wymagania.md, WCAG 2.2 AA): reduced-motion, brak-WebGL, low-memory-mobile.
-// reduced-motion i brak-WebGL prowadza do tej samej sciezki: klasa "motion" nie jest dodawana,
-// wiec .scene__canvas zostaje display:none, .scene__static jest widoczny, tory scrub sie nie rozwijaja,
-// zero rAF i zero smooth-scrollu. Pelna tresc pozostaje w DOM.
+// Ruch jest WLACZONY DOMYSLNIE dla kazdego: symulacja jest trescia marki, nie ozdobnikiem.
+// Zgodnosc daje WCAG 2.2.2 (Pause, Stop, Hide - poziom A): kontrolka "Zatrzymaj ruch" w headerze,
+// dostepna z klawiatury. Wybor zapamietuje sie w localStorage i wiaze przy kolejnych wizytach.
+// prefers-reduced-motion swiadomie NIE wylacza scen (decyzja marki), bo mechanizm zatrzymania
+// jest jawny i trwaly. Pelna tresc pozostaje w DOM w kazdym trybie.
+var MOTION_KEY="plum.motion";
+var motionPref=null;try{motionPref=window.localStorage.getItem(MOTION_KEY);}catch(e){}
+var still=(motionPref==="off");
 if(!hasGL)root.classList.add("no-webgl");
-if(reduce)root.classList.add("reduced");
+if(still)root.classList.add("still");
 if(lowMem)root.classList.add("lowmem");
 // Zero-network monitor Web Vitals (RUM-lite): tylko console.info, nic nie wysyla.
 if(window.PerformanceObserver){
@@ -531,14 +545,24 @@ if(window.PerformanceObserver){
 // Intro / choreografia ladowania (usuwa sie sama).
 (function(){var el=document.querySelector(".intro");if(!el)return;
   function done(){root.classList.add("intro-done");window.setTimeout(function(){if(el&&el.parentNode)el.parentNode.removeChild(el);},700);}
-  // reduced-motion: zero choreografii. Overlay musi jednak zniknac (html.js .intro to fixed inset:0),
+  // Zatrzymany ruch: zero choreografii. Overlay musi jednak zniknac (html.js .intro to fixed inset:0),
   // wiec usuwamy go natychmiast zamiast animowac.
-  if(reduce){if(el.parentNode)el.parentNode.removeChild(el);return;}
+  if(still){if(el.parentNode)el.parentNode.removeChild(el);return;}
   root.classList.add("intro-run");var t=window.setTimeout(done,1300);
   window.addEventListener("load",function(){window.clearTimeout(t);window.setTimeout(done,900);},{once:true});
 })();
-// Kursor sygnaturowy (dyskretny pierscien; tylko wskaznik precyzyjny, poza reduced-motion).
-if(finePointer&&!reduce){
+// Kontrolka zatrzymania ruchu (WCAG 2.2.2). Przeladowanie jest swiadome: gwarantuje czysty stan
+// (rAF, Lenis, klatki still) bez ryzyka polowicznego przelaczenia w locie.
+(function(){var b=document.getElementById("motionToggle");if(!b||!hasGL)return;
+  b.textContent=still?"Włącz ruch":"Zatrzymaj ruch";
+  b.setAttribute("aria-pressed",still?"true":"false");
+  b.addEventListener("click",function(){
+    try{window.localStorage.setItem(MOTION_KEY,still?"on":"off");}catch(e){}
+    window.location.reload();
+  });
+})();
+// Kursor sygnaturowy (dyskretny pierscien; tylko wskaznik precyzyjny, poza trybem zatrzymanym).
+if(finePointer&&!still){
   var cur=document.createElement("div");cur.className="cursor";cur.setAttribute("aria-hidden","true");document.body.appendChild(cur);
   var cx=window.innerWidth/2,cy=window.innerHeight/2,tx=cx,ty=cy,shown=false;
   window.addEventListener("pointermove",function(e){tx=e.clientX;ty=e.clientY;if(!shown){shown=true;root.classList.add("cursor-on");}},{passive:true});
@@ -549,10 +573,9 @@ if(finePointer&&!reduce){
 }
 // Brak WebGL: prawdziwy fallback statyczny (kadry .scene__static + caly tekst). Koniec.
 if(!hasGL){return;}
-// reduced-motion: tryb "zamrozonej klatki". Sceny renderuja shader RAZ i zastygaja, wiec widz
-// dostaje pelne malarstwo scen zamiast pustki. Klasy "motion" NIE dodajemy, wiec nie ma torow
-// scrub, sticky, oddechu, paska progresu ani animacji kart; canvas odslania regula html.reduced.
-var still=reduce;
+// Tryb zatrzymany: sceny renderuja shader RAZ i zastygaja, wiec widz dostaje pelne malarstwo
+// scen zamiast pustki. Klasy "motion" NIE dodajemy, wiec nie ma torow scrub, sticky, oddechu,
+// paska progresu ani animacji kart; canvas odslania regula html.still.
 var STILL_P=0.55;
 var STILL_T=8.0;
 if(!still)root.classList.add("motion");
