@@ -130,6 +130,13 @@ html.motion .scene.no-gl.scene--scrub{height:auto}
 html.motion .scene.no-gl.scene--scrub .scene__pin{position:relative;min-height:100svh;height:auto}
 html.no-webgl .scene--scrub{height:auto}
 html.no-webgl .scene--scrub .scene__pin{position:relative;min-height:100svh;height:auto}
+/* reduced-motion: "zamrozona klatka". Shader renderuje sie RAZ i zastyga, wiec widz dostaje
+   pelne malarstwo sceny zamiast ubogiego gradientu; zero ruchu, zero scrubbingu, zero uplywu czasu.
+   Kryterium art_direction: zatrzymana klatka ma czytac sie jak wydruk galeryjny. */
+html.reduced .scene__canvas{display:block}
+html.reduced .scene__static{display:none}
+html.reduced .scene.no-gl .scene__canvas{display:none}
+html.reduced .scene.no-gl .scene__static{display:block}
 
 /* Waski ekran (telefon): sceny zostaja wpuszczonymi kartami jak na desktopie (zaokraglone rogi, cien, margines 90vw z linii 110), tylko z mniejszymi odstepami i pinem pod naglowkiem. Rozmiary tekstu skaluja sie plynnie przez clamp, nie tutaj. */
 @media (max-width:47.99rem){
@@ -540,13 +547,18 @@ if(finePointer&&!reduce){
   document.addEventListener("mouseover",function(e){var t=e.target;var hot=!!(t&&t.closest&&t.closest("a,button,input,label"));root.classList.toggle("cursor-hot",hot);});
   (function loop(){cx+=(tx-cx)*0.18;cy+=(ty-cy)*0.18;cur.style.transform="translate("+cx.toFixed(1)+"px,"+cy.toFixed(1)+"px)";requestAnimationFrame(loop);})();
 }
-// Galaz reduced-motion konczy sie tu, razem z galezia brak-WebGL: bez klasy "motion" strona
-// zostaje statycznym, w pelni czytelnym dokumentem (kadry .scene__static + caly tekst).
-if(!hasGL||reduce){return;}
-root.classList.add("motion");
-var csanim=!!(window.CSS&&CSS.supports&&CSS.supports("animation-timeline: view()"));
+// Brak WebGL: prawdziwy fallback statyczny (kadry .scene__static + caly tekst). Koniec.
+if(!hasGL){return;}
+// reduced-motion: tryb "zamrozonej klatki". Sceny renderuja shader RAZ i zastygaja, wiec widz
+// dostaje pelne malarstwo scen zamiast pustki. Klasy "motion" NIE dodajemy, wiec nie ma torow
+// scrub, sticky, oddechu, paska progresu ani animacji kart; canvas odslania regula html.reduced.
+var still=reduce;
+var STILL_P=0.55;
+var STILL_T=8.0;
+if(!still)root.classList.add("motion");
+var csanim=!still&&!!(window.CSS&&CSS.supports&&CSS.supports("animation-timeline: view()"));
 if(csanim)root.classList.add("csanim");
-try{var __plumL=new window.PlumLenis({lerp:0.1,smoothWheel:true,touchMultiplier:1.5});(function _lr(t){__plumL.raf(t);requestAnimationFrame(_lr);})(0);window.__lenis=__plumL;}catch(e){}
+if(!still){try{var __plumL=new window.PlumLenis({lerp:0.1,smoothWheel:true,touchMultiplier:1.5});(function _lr(t){__plumL.raf(t);requestAnimationFrame(_lr);})(0);window.__lenis=__plumL;}catch(e){}}
 var PRELUDE="precision highp float;\nvarying vec2 vUv;\nuniform vec2 uRes;\nuniform float uP;\nuniform float uT;\nconst vec3 C_SWIT=vec3(0.984,0.957,0.925);\nconst vec3 C_NOC=vec3(0.149,0.059,0.059);\nconst vec3 C_ATR=vec3(0.141,0.071,0.063);\nconst vec3 C_SLIW=vec3(0.431,0.086,0.086);\nconst vec3 C_ZLOTO=vec3(0.753,0.537,0.369);\nconst vec3 C_BURS=vec3(0.549,0.298,0.208);\nconst vec3 C_MIAZ=vec3(0.910,0.859,0.761);\nconst vec3 C_BRZ=vec3(0.651,0.486,0.361);\nconst vec3 C_MGLA=vec3(0.851,0.733,0.663);\nfloat hash21(vec2 p){p=fract(p*vec2(123.34,345.45));p+=dot(p,p+34.345);return fract(p.x*p.y);}\nfloat vnoise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);\n  float a=hash21(i);float b=hash21(i+vec2(1.0,0.0));float c=hash21(i+vec2(0.0,1.0));float d=hash21(i+vec2(1.0,1.0));\n  return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}\nfloat fbm(vec2 p){float s=0.0;float a=0.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);\n  for(int i=0;i<5;i++){s+=a*vnoise(p);p=m*p;a*=0.5;}return s;}\nmat2 rot(float a){float c=cos(a);float s=sin(a);return mat2(c,-s,s,c);}\nfloat sat(float x){return clamp(x,0.0,1.0);}\nvec2 aspp(){vec2 p=vUv-0.5;p.x*=uRes.x/uRes.y;return p;}\nfloat caustics(vec2 p,float t){float v=0.0;vec2 q=p;\n  for(int i=0;i<3;i++){float fi=float(i);q=p*(2.0+fi*1.4)+vec2(t*0.15*(fi+1.0),-t*0.1);\n    v+=abs(sin(q.x+fbm(q))*cos(q.y+fbm(q.yx)));}\n  return v/3.0;}\nvec3 liquidDrop(vec2 p,vec2 c,float r,float elong,vec3 core,vec3 rim){\n  vec2 d=p-c;d.y/=elong;float dist=length(d);\n  float body=smoothstep(r,r*0.72,dist);\n  float edge=smoothstep(r*0.55,r*0.98,dist);\n  vec2 hp=d+vec2(-r*0.30,-r*0.34);\n  float hi=smoothstep(r*0.5,0.0,length(hp));\n  float caus=0.5+0.5*sin(dist*38.0-uT*1.5+fbm(d*8.0)*3.0);\n  vec3 col=mix(core,rim,edge);\n  col+=core*caus*0.12*body;\n  col=mix(col,vec3(1.0),hi*0.75*body);\n  float glow=exp(-dist*3.2/r)*0.30;\n  return col*body+rim*glow;}\nvec3 post(vec3 col,vec2 uv){\n  float vig=smoothstep(1.15,0.35,length(uv-0.5));\n  col*=mix(0.72,1.0,vig);\n  col=col/(col+vec3(0.85))*1.85;float lum=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(col,vec3(lum),0.20);col=mix(col,mix(vec3(0.14,0.075,0.065),vec3(1.0,0.93,0.86),lum),0.26);col*=vec3(1.02,1.0,0.95);\n  float g=hash21(uv*uRes.xy+uT)*0.05-0.025;\n  col+=g;\n  return clamp(col,0.0,1.0);}\n";
 var MAIN="\nvoid main(){vec3 c=scene();c=post(c,vUv);gl_FragColor=vec4(c,1.0);}\n";
 var VERT="attribute vec2 aPos;varying vec2 vUv;void main(){vUv=aPos*0.5+0.5;gl_Position=vec4(aPos,0.0,1.0);}";
@@ -594,10 +606,27 @@ function sizeScene(s){
   if(s.canvas.width!==cw||s.canvas.height!==ch){s.canvas.width=cw;s.canvas.height=ch;}
   s.vw=cw;s.vh=ch;s.sized=true;
 }
+// Jedna klatka i koniec (tryb still). Zero rAF, zero uplywu czasu, zero scrubbingu scrollem.
+function renderStill(s){
+  if(s.kind==="bands"){if(s.bands)s.bands.style.setProperty("--p",STILL_P.toFixed(3));return;}
+  if(!s.init){if(s.failed)return;initScene(s);if(!s.init)return;}
+  sizeScene(s);
+  var gl=s.gl;gl.viewport(0,0,s.vw,s.vh);gl.useProgram(s.prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER,s.buf);gl.enableVertexAttribArray(s.aPos);gl.vertexAttribPointer(s.aPos,2,gl.FLOAT,false,0,0);
+  gl.uniform2f(s.uRes,s.vw,s.vh);gl.uniform1f(s.uP,STILL_P);gl.uniform1f(s.uT,STILL_T);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+}
 var io=new IntersectionObserver(function(entries){entries.forEach(function(e){
-  for(var i=0;i<scenes.length;i++){if(scenes[i].el===e.target){scenes[i].active=e.isIntersecting;if(e.isIntersecting&&scenes[i].kind!=="bands")initScene(scenes[i]);}}
+  for(var i=0;i<scenes.length;i++){if(scenes[i].el===e.target){var sc=scenes[i];sc.active=e.isIntersecting;
+    if(e.isIntersecting&&sc.kind!=="bands")initScene(sc);
+    if(still&&e.isIntersecting&&!sc.drawn){sc.drawn=true;renderStill(sc);}}}
 });},{rootMargin:"20% 0px"});
 scenes.forEach(function(s){io.observe(s.el);});
+// Tryb still nie czeka na scroll: klatka to jeden rysunek na scene, wiec rysujemy od razu kazda
+// scene majaca realny layout (aktywna strona). Sceny stron nieaktywnych maja zerowy rect i dorysuje
+// je IntersectionObserver po nawigacji. Dzieki temu canvas nigdy nie jest pusty (takze po bfcache).
+if(still){scenes.forEach(function(s){var r=s.el.getBoundingClientRect();
+  if(r.width>0&&r.height>0&&!s.drawn){s.drawn=true;renderStill(s);}});}
 function progressOf(el){var r=el.getBoundingClientRect();var vh=window.innerHeight;var total=r.height-vh;if(total<=0)return r.top<vh?1:0;return clampf(-r.top/total,0,1);}
 var bar=document.getElementById("progressBar");var t0=null;var us=false;
 ["wheel","touchmove","keydown","pointerdown"].forEach(function(ev){window.addEventListener(ev,function(){us=true;},{passive:true,once:true});});
@@ -617,10 +646,13 @@ function frame(ts){
   if(bar){var de=document.documentElement;bar.style.height=(clampf(de.scrollTop/(de.scrollHeight-de.clientHeight||1),0,1)*100)+"%";}
   requestAnimationFrame(frame);
 }
-if(!csanim){var enterIO=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add("is-in");});},{rootMargin:"0px 0px -20% 0px"});
+if(!csanim&&!still){var enterIO=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add("is-in");});},{rootMargin:"0px 0px -20% 0px"});
 Array.prototype.forEach.call(document.querySelectorAll(".card,.ladder li"),function(el){enterIO.observe(el);});}
-window.addEventListener("resize",function(){DPR=Math.min(window.devicePixelRatio||1,lowMem?1:(window.innerWidth<768?1.5:2));scenes.forEach(function(s){s.sized=false;});});
-requestAnimationFrame(frame);
+// Resize zmienia rozmiar canvasa, wiec zamrozona klatka musi zostac przerysowana (to nie jest ruch).
+window.addEventListener("resize",function(){DPR=Math.min(window.devicePixelRatio||1,lowMem?1:(window.innerWidth<768?1.5:2));scenes.forEach(function(s){s.sized=false;});
+  if(still){scenes.forEach(function(s){if(s.drawn)renderStill(s);});}
+});
+if(!still)requestAnimationFrame(frame);
 })();
 </script>
 </body>
