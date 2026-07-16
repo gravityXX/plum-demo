@@ -154,6 +154,11 @@ html.still .scene.no-gl .scene__static{display:block}
   html.motion .scene--scrub .scene__pin{top:calc(var(--size-header) + var(--space-sm));height:calc(100svh - var(--size-header) - var(--space-lg))}
   .scene__kicker{margin-bottom:var(--space-xs)}
   .scene__text{padding-bottom:var(--space-2xl)}
+  /* OS1-S02 na telefonie: wrapper 220vh wg scene_specs.md. Kolejnosc i easing pasm bez zmian
+     (parytet narracyjny W22). Odstepstwo od specu: podpisy zostaja NA pasmach, nie pod nimi -
+     patrz README "Odstepstwa". */
+  .scene--bands{--track:2.2;margin-block:var(--space-2xl)}
+  html.motion .scene--bands .bands{top:calc(var(--size-header) + var(--space-sm));height:calc(100svh - var(--size-header) - var(--space-lg))}
 }
 
 .scene__static{background:
@@ -166,18 +171,56 @@ html.still .scene.no-gl .scene__static{display:block}
 .sf-night{--sf-glow:rgba(192,137,94,.26);--sf-top:#241210;--sf-bot:#150808}
 .sf-light{--sf-glow:rgba(192,137,94,.20);--sf-top:#F5EBDD;--sf-bot:#E8D6C2}
 
-.bands{--p:.5;position:relative;height:100svh;display:flex;flex-direction:column;justify-content:center;
-  gap:var(--space-md);padding:var(--size-header) var(--page-margin) var(--space-xl)}
-.band{position:relative;border-radius:var(--radius-surface);min-height:18vh;display:flex;align-items:flex-end;
-  padding:var(--space-md);overflow:hidden;opacity:calc(.55 + .45 * var(--p));transform:translateY(calc((1 - var(--p)) * 3%))}
-.band--1{background:linear-gradient(120deg,#8A5A1E,#6E2A52)}
-.band--2{background:linear-gradient(120deg,#7C8A6E,#cbd3c2)}
-.band--3{background:linear-gradient(120deg,#D9A05B,#8A5A1E)}
-.band a{color:var(--color-text-primary-on-dark);text-decoration:none;font-family:var(--font-family-display);
+/* OS1-S02 "Trzy krajobrazy" - jedyna scena strony bez canvas i bez WebGL.
+   Uzasadnienie kosztu wg design/motion/scene_specs.md: pasma to statyczne gradienty poruszane
+   transformem, wiec najtanszy szczebel drabiny wystarcza w calosci (<= 1 ms/klatke, 0 MB).
+   JS podaje TYLKO skalar --p (0-1). Cala os czasu sceny liczy sie ponizej w calc(), zeby
+   choreografia miala jeden dom (ten arkusz), a nie dwa (arkusz + petla rAF).
+   Domyslne --p:.55 = "hold" z osi czasu (46-64%): trzy pasma stoja jak spis tresci. Dzieki temu
+   brak JS i brak WebGL daja od razu poprawny kadr fallbacku, bez ani jednej linii JS. */
+.bands{--p:.55;
+  --e1:clamp(0,calc(var(--p) / .18),1);           /* wejscie pasma 1: 0-18%   */
+  --e2:clamp(0,calc((var(--p) - .14) / .18),1);   /* wejscie pasma 2: 14-32%  */
+  --e3:clamp(0,calc((var(--p) - .28) / .18),1);   /* wejscie pasma 3: 28-46%  */
+  --out:clamp(0,calc((var(--p) - .64) / .18),1);  /* antycypacja:     64-82%  */
+  --fin:clamp(0,calc((var(--p) - .82) / .18),1);  /* przejscie w S03: 82-100% */
+  position:relative;height:100svh;display:flex;flex-direction:column;justify-content:center;
+  gap:var(--space-md);padding:var(--space-4xl) var(--space-lg) var(--space-lg);
+  max-width:min(1000px,90vw);margin-inline:auto;border-radius:26px;overflow:hidden;
+  background:var(--color-bg-dark);box-shadow:0 40px 90px -34px rgba(30,22,16,.45)}
+.band{position:relative;z-index:1;flex:1 1 0;min-height:18vh;border-radius:var(--radius-surface);
+  display:flex;align-items:flex-end;padding:var(--space-md);overflow:hidden;
+  opacity:calc(var(--e) * (1 - var(--out) * .45) * (1 - var(--fin)));
+  transform:translateY(calc((1 - var(--e)) * 4%)) scale(calc(1 - var(--out) * .015))}
+/* Przyciemnienie pod podpisem (ten sam chwyt co .scene__pin::after nad canvasem, inne przystanki).
+   Pasma sa niskie (~150 px), wiec podpis siega ~42% wysokosci pasma - procenty ze sceny (panel
+   ~650 px) daja tam za malo krycia. Zmierzone: bez scrimu 1.15:1 na pasmie 2, na przystankach
+   sceny 3.07:1 na pasmie 3, tu 7.5:1+ na kazdym pasmie. Prog 3:1 (WCAG 1.4.3, duzy tekst 24 px).
+   Zapas jest celowy: kazda zmiana copy albo stopnia pisma inaczej po cichu zsuwa to pod prog. */
+.band::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(0deg,rgba(12,6,6,.82) 0%,rgba(12,6,6,.52) 42%,rgba(12,6,6,0) 72%)}
+.band--1{--e:var(--e1);--cap:.20;background:linear-gradient(120deg,#8A5A1E,#6E2A52);z-index:2;
+  opacity:var(--e1);
+  transform:translateY(calc((1 - var(--e1)) * 4%)) scaleY(calc(1 + var(--fin) * .55));
+  filter:brightness(calc(1 + var(--fin) * .12))}
+.band--2{--e:var(--e2);--cap:.34;background:linear-gradient(120deg,#7C8A6E,#cbd3c2)}
+.band--3{--e:var(--e3);--cap:.48;background:linear-gradient(120deg,#D9A05B,#8A5A1E)}
+/* kt.reveal-kaskada: podpisy wchodza kolejno przy 20/34/48%, kazdy jako calosc (nigdy per slowo
+   ani per litera - Kanon #2). Domkniete do 54%, wiec w kadrze "hold" (.55) wszystkie sa pelne. */
+.band a{position:relative;z-index:1;color:var(--color-text-primary-on-dark);text-decoration:none;
+  font-family:var(--font-family-display);opacity:clamp(0,calc((var(--p) - var(--cap)) / .06),1);
   font-size:var(--font-size-h3);text-shadow:0 1px 12px rgba(32,22,38,.55);min-height:var(--size-target-min);display:inline-flex;align-items:flex-end}
 .band a:hover{text-decoration:underline;text-underline-offset:var(--border-underline-offset)}
-.bands__title{position:absolute;top:calc(var(--size-header) + var(--space-md));left:var(--page-margin);right:var(--page-margin);
+.bands__title{position:absolute;top:var(--space-lg);left:var(--space-lg);right:var(--space-lg);z-index:3;
+  opacity:clamp(0,calc((var(--p) - .08) / .12),1);
   font-family:var(--font-family-display);font-size:var(--font-size-h2);color:var(--color-text-primary-on-dark)}
+
+/* --track mieszka tutaj, a nie w atrybucie style= jak w scenach shaderowych: os czasu tej sceny
+   jest w calosci w CSS, a inline var wygrywa z kazda regula arkusza, wiec nie dalby sie skrocic
+   do 220vh na telefonie (patrz @media ponizej). */
+.scene--bands{--track:2.5;background:var(--color-bg-light);margin-block:var(--space-4xl)}
+html.motion .scene--bands{height:calc(var(--track) * 100svh)}
+html.motion .scene--bands .bands{position:sticky;top:9svh;height:82svh}
 
 .flow{padding:var(--space-4xl) var(--page-margin)}
 .flow__inner{max-width:var(--size-measure-text);margin-inline:auto}
@@ -191,11 +234,18 @@ html.still .scene.no-gl .scene__static{display:block}
 .flow p{max-width:65ch}
 .flow p + p{margin-top:var(--space-md)}
 
-.toc{list-style:none;padding:0;margin:var(--space-lg) 0 0;display:flex;flex-wrap:wrap;gap:var(--space-2xs) var(--space-sm)}
-.toc a{color:var(--color-link-on-dark);text-decoration:none;font-size:var(--font-size-label);
-  border-bottom:var(--border-hairline) solid var(--color-border-subtle-on-dark);padding:var(--space-2xs) 0;
+/* Spis rozdzialow opowiesci (nav.spis_rozdzialow). Rejestr jasny jest baza, bo opowiesc jest
+   strona jasna; ciemny rejestr nadpisuje, tak jak przy .eyebrow. */
+.toc-wrap{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-2xs) var(--space-sm);margin:var(--space-lg) 0 0}
+.toc__label{margin:0;font-size:var(--font-size-label);color:var(--color-text-secondary-on-light)}
+.toc{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:var(--space-2xs) var(--space-sm)}
+.toc a{color:var(--color-link-on-light);text-decoration:none;font-size:var(--font-size-label);
+  border-bottom:var(--border-hairline) solid var(--color-border-subtle-on-light);padding:var(--space-2xs) 0;
   min-height:var(--size-target-min);display:inline-flex;align-items:center}
-.toc a:hover{border-bottom-color:var(--color-link-on-dark)}
+.toc a:hover{border-bottom-color:var(--color-link-on-light)}
+.reg-dark .toc__label{color:var(--color-text-secondary-on-dark)}
+.reg-dark .toc a{color:var(--color-link-on-dark);border-bottom-color:var(--color-border-subtle-on-dark)}
+.reg-dark .toc a:hover{border-bottom-color:var(--color-link-on-dark)}
 .reg-light .toc a{color:var(--color-accent-warm-on-light);border-bottom-color:var(--color-border-subtle-on-light)}
 .reg-light .toc a:hover{border-bottom-color:var(--color-accent-warm-on-light)}
 
@@ -336,6 +386,9 @@ html.js .page.is-active{display:block}
 
 /* --- Strona produktu (rozdzialy + skladniki z funkcjami) --- */
 .chapter{font-family:var(--font-family-display);font-size:var(--font-size-h3);margin:var(--space-2xl) 0 var(--space-sm);color:var(--color-accent-warm-on-light)}
+/* Naglowek sceny pod nazwa rozdzialu: rozdzial ma etykiete (spis tresci), scena ma zdanie. */
+.chapter__lead{font-family:var(--font-family-display);font-size:var(--font-size-h3);
+  line-height:var(--font-lineheight-heading);color:var(--color-text-primary-on-light);margin-bottom:var(--space-sm)}
 .ingredients{list-style:none;padding:0;margin:var(--space-lg) 0 0;display:flex;flex-direction:column;gap:var(--space-lg)}
 .ingredients__name{display:block;font-family:var(--font-family-display);font-size:var(--font-size-h3);color:var(--color-text-primary-on-light)}
 .ingredients__role{display:block;margin-top:var(--space-3xs);color:var(--color-text-secondary-on-light)}
@@ -353,6 +406,7 @@ html.js .page.is-active{display:block}
   <a class="brand" href="#home">Plum.</a>
   <nav class="site-nav" aria-label="Główna">
     <a href="#linia">Linia</a>
+    <a href="#produkt-nocne">Opowieść</a>
     <a href="#lista">Lista oczekujących</a>
     <button type="button" class="motion-toggle" id="motionToggle" aria-pressed="false">Zatrzymaj ruch</button>
   </nav>
@@ -374,6 +428,15 @@ html.js .page.is-active{display:block}
       </div>
     </div>
 
+
+    <section class="scene scene--bands reg-dark" id="zapowiedz" data-scene="bands" aria-labelledby="zapowiedz-title">
+      <div class="bands">
+        <h2 class="bands__title" id="zapowiedz-title">Trzy krajobrazy Polski. Jeden krążek.</h2>
+        <div class="band band--1"><a href="#skladnik-sliwka">Sad o zmierzchu</a></div>
+        <div class="band band--2"><a href="#skladnik-brzoza">Prześwit brzozowego lasu</a></div>
+        <div class="band band--3"><a href="#skladnik-dziurawiec">Złota łąka</a></div>
+      </div>
+    </section>
 
     <div class="scene scene--scrub reg-dark" id="skladnik-sliwka" data-scene="plum" style="--track:3.5" aria-label="Olej z pestek śliwki">
       <div class="scene__pin">
@@ -458,17 +521,39 @@ html.js .page.is-active{display:block}
       <div class="flow__inner">
         <p class="eyebrow">Prasowane serum nocne</p>
         <h2 class="story-title" style="font-size:var(--font-size-h1);line-height:var(--font-lineheight-hero)">Rytuał, który domyka dzień</h2>
-        <h3 class="chapter">Potrzeba</h3>
+        <nav class="toc-wrap" aria-labelledby="opowiesc-spis">
+          <p class="toc__label" id="opowiesc-spis">Spis rozdziałów:</p>
+          <ul class="toc">
+            <li><a href="#opowiesc-potrzeba">Potrzeba</a></li>
+            <li><a href="#opowiesc-skladniki">Składniki</a></li>
+            <li><a href="#opowiesc-tekstura">Tekstura i rytuał</a></li>
+            <li><a href="#opowiesc-dowody">Dowody</a></li>
+            <li><a href="#opowiesc-lista">Lista</a></li>
+          </ul>
+        </nav>
+        <h3 class="chapter" id="opowiesc-potrzeba">Potrzeba</h3>
         <p>Zmywasz dzień i zostaje pytanie: czy to już wszystko? Wieczór zasługuje na własny, spokojny finał: jeden gest, który zamyka pielęgnację i otwiera noc.</p>
-        <h3 class="chapter">Składniki i ich rola</h3>
+        <h3 class="chapter" id="opowiesc-skladniki">Składniki i ich rola</h3>
         <ul class="ingredients">
           <li><span class="ingredients__name">Olej z pestek śliwki</span><span class="ingredients__role">Sygnaturowe, jedwabiste tło serum: rozpływa się w cienką, świetlistą warstwę, nietłustą. Z pestki, której nikt nie chciał.</span></li>
           <li><span class="ingredients__name">Ekstrakt z kory brzozy</span><span class="ingredients__role">Wygładza fakturę powierzchni, wspiera regenerację i barierę skóry.</span></li>
           <li><span class="ingredients__name">Macerat z dziurawca</span><span class="ingredients__role">Składnik tradycyjnie stosowany w wieczornej, regeneracyjnej pielęgnacji skóry.</span></li>
           <li><span class="ingredients__name">Bakuchiol</span><span class="ingredients__role">Działanie retinolopodobne przy lepszej tolerancji niż retinol.</span></li>
         </ul>
-        <h3 class="chapter">Tekstura i rytuał</h3>
+        <h3 class="chapter" id="opowiesc-tekstura">Tekstura i rytuał</h3>
         <p>Opuszek naciska matową powierzchnię. Materia topnieje w kroplę i ciągnie się za palcem świetlistą smugą. Dwa takty wieczoru: tonik (woda osiada na skórze), potem serum (olej domyka wieczór spokojnym połyskiem).</p>
+        <h3 class="chapter" id="opowiesc-dowody">Dowody</h3>
+        <p class="chapter__lead">Dlaczego nie znajdziesz tu procentów.</p>
+        <p>Nie podajemy liczb, których nie moglibyśmy uczciwie udowodnić na tej formule. Zamiast tego pokazujemy, jak mocny jest dowód za każdym zdaniem.</p>
+        <ul class="ladder">
+          <li><span class="tier">T1</span><p class="claim">Bakuchiol: działanie retinolopodobne przy lepszej tolerancji niż retinol.</p></li>
+          <li><span class="tier">T2</span><p class="claim">Ekstrakt z kory brzozy wspiera regenerację i barierę skóry.</p></li>
+          <li><span class="tier">T3</span><p class="claim">Macerat z dziurawca: składnik tradycyjnie stosowany w regeneracyjnej pielęgnacji skóry.</p></li>
+          <li><span class="tier tier--close">Domknięcie ramy</span><p class="claim">Całe serum wspiera naturalny proces regeneracji skóry.</p></li>
+        </ul>
+        <h3 class="chapter" id="opowiesc-lista">Lista</h3>
+        <p class="chapter__lead">Opowieść się kończy. Drzwi zostają otwarte.</p>
+        <p>Kiedy pierwsza partia będzie gotowa, lista dowie się pierwsza.</p>
         <p style="margin-top:var(--space-2xl)"><a class="cta" href="#lista">Dołącz do listy pierwszej partii</a></p>
         <p style="margin-top:var(--space-md)"><a class="cta" href="#linia">Wróć do linii</a></p>
       </div>
@@ -516,8 +601,22 @@ html.js .page.is-active{display:block}
 var root=document.documentElement;root.classList.add("js");
 // Router: strony home / linia / lista (hash).
 (function(){var pages=document.querySelectorAll("[data-page]");if(!pages.length)return;
-  function show(name){var found=false;for(var i=0;i<pages.length;i++){var on=pages[i].getAttribute("data-page")===name;pages[i].classList.toggle("is-active",on);if(on)found=true;}if(!found)for(var j=0;j<pages.length;j++)pages[j].classList.toggle("is-active",pages[j].getAttribute("data-page")==="home");try{window.scrollTo(0,0);}catch(e){}}
-  function route(){show((location.hash||"").replace(/^#\/?/,"")||"home");}
+  function show(name){var found=false;for(var i=0;i<pages.length;i++){var on=pages[i].getAttribute("data-page")===name;pages[i].classList.toggle("is-active",on);if(on)found=true;}if(!found)for(var j=0;j<pages.length;j++)pages[j].classList.toggle("is-active",pages[j].getAttribute("data-page")==="home");}
+  // Hash pelni tu dwie role: nazwa strony (#lista, #produkt-nocne) ALBO kotwica w obrebie strony
+  // (#tresc, #skladnik-sliwka, #opowiesc-dowody). Rozstrzyga istnienie elementu o tym id.
+  // Gdy to kotwica, router sie NIE wtraca: przewijanie nalezy do przegladarki. Bez tego rozroznienia
+  // kazda kotwica wpadala w galez "nieznana strona" i wracala na gore strony glownej - co psulo
+  // takze skip link (WCAG 2.4.1 Bypass Blocks), jedyna kotwice, jaka strona dotad miala.
+  function route(){
+    var raw=(location.hash||"").replace(/^#\/?/,"");
+    var target=raw&&document.getElementById?document.getElementById(raw):null;
+    if(target){
+      var owner=target.closest?target.closest("[data-page]"):null;
+      if(owner&&!owner.classList.contains("is-active")){show(owner.getAttribute("data-page"));try{target.scrollIntoView();}catch(e){}}
+      return;
+    }
+    show(raw||"home");try{window.scrollTo(0,0);}catch(e){}
+  }
   window.addEventListener("hashchange",route);route();})();
 var mm=(window.matchMedia)?function(q){try{return window.matchMedia(q).matches;}catch(e){return false;}}:function(){return false;};
 var finePointer=mm("(pointer: fine)");
@@ -657,7 +756,7 @@ function frame(ts){
   if(t0===null)t0=ts;var time=(ts-t0)/1000;
   for(var i=0;i<scenes.length;i++){var s=scenes[i];if(!s.active)continue;
     var p=progressOf(s.el);if(s.kind==="hero"&&!us){p=Math.min(1,time/3.0)*0.6;}
-    if(s.kind==="bands"){if(s.bands)s.bands.style.setProperty("--p",(0.15+0.85*p).toFixed(3));continue;}
+    if(s.kind==="bands"){if(s.bands)s.bands.style.setProperty("--p",p.toFixed(3));continue;}
     if(!s.init){if(!s.failed)initScene(s);if(!s.init)continue;}
     if(!s.sized)sizeScene(s);
     s.p=p;s.pS+=(p-s.pS)*(window.innerWidth<768?0.15:0.12);if(Math.abs(s.p-s.pS)<0.0006)s.pS=s.p;
