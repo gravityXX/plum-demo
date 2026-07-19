@@ -41,6 +41,8 @@
   --color-border-subtle-on-dark:rgba(217,187,169,.24);
   --color-border-subtle-on-light:rgba(94,83,68,.24);
   --color-decor-forest:var(--color-base-przeswit-brzozy);
+  --color-base-noc-60:#260F0F99;--color-scrim-panel:var(--color-base-noc-60);
+  --z-scrim:21;--z-panel:22;
   --font-family-display:'Bodoni Moda',ui-serif,Georgia,'Times New Roman',Times,serif;
   --font-family-text:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --font-weight-text-strong:600;
@@ -87,40 +89,63 @@ a{color:inherit}
 .brand{font-family:var(--font-family-display);color:var(--color-text-primary-on-light);
   font-size:1.25rem;letter-spacing:.32em;text-decoration:none;padding-left:.1em;text-transform:uppercase;
   white-space:nowrap;flex-shrink:0}
-.site-nav{display:flex;gap:clamp(.75rem,3vw,2rem)}
+/* Pasek rozwiniety (O1, >= bp.sm 40rem): znak + 3 linki + kontrolka w jednym wierszu, jak dotad.
+   Dyrektywa zalozyciela 2026-07-19 (menu mobilne skladane): ponizej bp.sm caly ten blok znika,
+   nawigacja przenosi sie w calosci do panelu O11 (.menu nizej) - patrz www/ux/sitemap.md. */
+.site-nav{display:none;align-items:center;gap:clamp(.75rem,3vw,2rem)}
 .site-nav a{color:var(--color-text-secondary-on-light);text-decoration:none;font-size:var(--font-size-micro);
   letter-spacing:var(--font-tracking-caps);text-transform:uppercase;min-height:var(--size-target-min);
   display:inline-flex;align-items:center;white-space:nowrap;transition:color var(--duration-micro) var(--ease-out)}
 .site-nav a:hover{color:var(--color-link-on-light)}
-/* Kontrolka zatrzymania ruchu (WCAG 2.2.2). Bez JS nie ma ruchu, wiec i kontrolka jest zbedna. */
+@media (min-width:40rem){.site-nav{display:flex}}
+/* Kontrolka zatrzymania ruchu (WCAG 2.2.2). Bez JS nie ma ruchu, wiec i kontrolka jest zbedna.
+   RETIRED (2026-07-19, komponenty.md A7): wariant ikonowy zniesiony - menu skladane usuwa jedyny
+   scenariusz, w ktorym pelny pasek renderowal sie ponizej bp.sm. Jeden wariant tekstowy, zyje w
+   DWOCH miejscach (pasek rozwiniety .site-nav i panel .menu__panel), przelaczane wylacznie CSS-em. */
 .motion-toggle{display:none}
 html.js .motion-toggle{display:inline-flex;align-items:center;min-height:var(--size-target-min);
-  background:none;border:0;padding:0;cursor:pointer;font:inherit;
+  background:none;border:0;padding-inline:var(--space-sm);cursor:pointer;font:inherit;
   color:var(--color-text-secondary-on-light);font-size:var(--font-size-micro);
   letter-spacing:var(--font-tracking-caps);text-transform:uppercase;
   white-space:nowrap;flex-shrink:0;
   transition:color var(--duration-micro) var(--ease-out)}
-html.js .motion-toggle:hover{color:var(--color-link-on-light)}
+html.js .motion-toggle:hover,html.js .motion-toggle[aria-pressed=true]{color:var(--color-link-on-light)}
 html.no-webgl .motion-toggle{display:none}
-/* Glif pauzy wariantu ikonowego (wzor A7 komponenty.md; w demo nieaktywny >= 24rem). */
-.motion-toggle__glyph{display:none;align-items:center;justify-content:center;gap:var(--space-3xs)}
-.motion-toggle__glyph span{width:var(--space-3xs);height:var(--space-sm);background:currentColor}
-/* Wariant ikonowy < 24rem (prog bp.xs z tokens.md; domyka bilans szerokosci headera na 320-383px):
-   etykieta tekstowa znika, kanoniczne brzmienie w calosci w aria-label; boks celu dotykowego
-   size-target-min x size-target-min; stan niesie kolor glifu (aria-pressed), nie ksztalt. */
-@media (max-width:23.99rem){
-  html.js .motion-toggle{width:var(--size-target-min);justify-content:center;padding:0}
-  .motion-toggle__text{display:none}
-  html.js .motion-toggle__glyph{display:inline-flex}
-  html.js .motion-toggle[aria-pressed=true]{color:var(--color-link-on-light)}}
-/* Najwezsze kadry (< ok. 480px; defekt mobilny ze zrzutu zalozyciela 2026-07-19: "Lista oczekujacych"
-   lamala sie na dwie linie, kontrolka wychodzila poza kadr): etykieta listy przechodzi na krotka forme
-   "Lista" (span z reszta etykiety znika; "Lista" jest podlancuchem etykiety pelnej, wiec parytet W3
-   bezpieczny - potwierdzenie kuratora, klucz kanoniczny nav.lista_krotka w copy_deck.md), rynna i
-   marginesy headera schodza o krok skali; kontrolka pozostaje w calosci widoczna (nowrap + shrink 0). */
-@media (max-width:29.99rem){.site-nav a span{display:none}
-  .site-nav{gap:var(--space-3xs)}
-  .site-header{padding-inline:var(--space-sm)}}
+
+/* Przycisk menu (A8) + panel nawigacji mobilnej (O11), < bp.sm: dyrektywa zalozyciela 2026-07-19
+   (www/ux/sitemap.md §Model nawigacji). Fallback bez JS: <details open> - panel zostaje w przeplywie
+   dokumentu, scrim nieobecny (nienegocjowalne, komponenty.md O11). Z JS (html.js, IIFE nizej):
+   startowo zwiniety, overlay fixed + scrim + focus trap + blokada scrolla + inert. */
+.menu{display:block}
+@media (min-width:40rem){.menu{display:none}}
+.menu__trigger{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  list-style:none;min-height:var(--size-target-min);padding-inline:var(--space-sm);
+  color:var(--color-text-secondary-on-light);font-size:var(--font-size-micro);
+  letter-spacing:var(--font-tracking-caps);text-transform:uppercase;white-space:nowrap}
+.menu__trigger::-webkit-details-marker{display:none}
+.menu__trigger::marker{content:''}
+.menu[open]>.menu__trigger{color:var(--color-link-on-light)}
+.menu__scrim{display:none}
+.menu__panel{border-top:var(--border-hairline) solid var(--color-border-subtle-on-light);
+  padding:var(--space-md) var(--page-margin) var(--space-lg)}
+.menu__panel nav a{display:flex;align-items:center;min-height:var(--size-target-min);
+  padding-block:var(--space-sm);color:var(--color-text-primary-on-light);text-decoration:none;
+  border-bottom:var(--border-hairline) solid var(--color-border-subtle-on-light)}
+.menu__panel .motion-toggle{margin-top:var(--space-md);padding-inline:0}
+html.js .menu__panel{position:fixed;top:var(--size-header);left:0;right:0;z-index:var(--z-panel);
+  background:var(--color-bg-light);max-height:calc(100svh - var(--size-header));overflow-y:auto;
+  transform:translateY(calc(-1 * var(--space-sm)));opacity:0;visibility:hidden;pointer-events:none;
+  transition:transform var(--duration-medium) var(--ease-out),opacity var(--duration-medium) var(--ease-out),
+    visibility 0s linear var(--duration-medium)}
+html.js .menu[open] .menu__panel{transform:translateY(0);opacity:1;visibility:visible;pointer-events:auto;
+  transition:transform var(--duration-medium) var(--ease-out),opacity var(--duration-medium) var(--ease-out),visibility 0s}
+html.js .menu__scrim{display:block;position:fixed;top:var(--size-header);left:0;right:0;bottom:0;
+  z-index:var(--z-scrim);background:var(--color-scrim-panel);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity var(--duration-short) var(--ease-in-out),visibility 0s linear var(--duration-short)}
+html.js .menu[open] .menu__scrim{opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity var(--duration-short) var(--ease-in-out)}
+html.still .menu__panel,html.still .menu__scrim{transition:none}
+html.menu-open{overflow:hidden}
 
 .reg-dark{background:var(--color-bg-dark);color:var(--color-text-primary-on-dark)}
 .reg-light{background:var(--color-bg-light);color:var(--color-text-primary-on-light)}
@@ -477,13 +502,25 @@ html.js .page.is-active{display:block}
 <div class="progress" aria-hidden="true"><span class="progress__bar" id="progressBar"></span></div>
 
 <header class="site-header">
-  <a class="brand" href="#home">Plum.</a>
+  <a class="brand" href="#home" data-menu-brand>Plum.</a>
   <nav class="site-nav" aria-label="Główna">
     <a href="#linia">Linia</a>
     <a href="#produkt-nocne">Opowieść</a>
-    <a href="#lista">Lista<span> oczekujących</span></a>
-    <button type="button" class="motion-toggle" id="motionToggle" aria-pressed="false" aria-label="Zatrzymaj ruch"><span class="motion-toggle__text">Zatrzymaj ruch</span><span class="motion-toggle__glyph" aria-hidden="true"><span></span><span></span></span></button>
+    <a href="#lista">Lista oczekujących</a>
+    <button type="button" class="motion-toggle" data-motion-toggle aria-pressed="false" aria-label="Zatrzymaj ruch"><span class="motion-toggle__text">Zatrzymaj ruch</span></button>
   </nav>
+  <details class="menu" data-menu open>
+    <summary class="menu__trigger" data-menu-trigger aria-expanded="true" aria-controls="menuNav" data-label-open="Menu" data-label-close="Zamknij menu"><span data-menu-label>Zamknij menu</span></summary>
+    <div class="menu__scrim" data-menu-scrim></div>
+    <div class="menu__panel" id="menuNav" data-menu-panel>
+      <nav aria-label="Menu główne">
+        <a href="#linia">Linia</a>
+        <a href="#produkt-nocne">Opowieść</a>
+        <a href="#lista">Lista oczekujących</a>
+      </nav>
+      <button type="button" class="motion-toggle" data-motion-toggle aria-pressed="false" aria-label="Zatrzymaj ruch"><span class="motion-toggle__text">Zatrzymaj ruch</span></button>
+    </div>
+  </details>
 </header>
 
 <main id="tresc">
@@ -792,19 +829,52 @@ if(window.PerformanceObserver){
   window.addEventListener("load",function(){window.clearTimeout(t);window.setTimeout(done,900);},{once:true});
 })();
 // Kontrolka zatrzymania ruchu (WCAG 2.2.2). Przeladowanie jest swiadome: gwarantuje czysty stan
-// (rAF, Lenis, klatki still) bez ryzyka polowicznego przelaczenia w locie.
-(function(){var b=document.getElementById("motionToggle");if(!b||!hasGL)return;
-  // Kanoniczne brzmienie stanu idzie w DWA miejsca (wzor A7 komponenty.md): widoczny tekst wariantu
-  // tekstowego (span, nie caly button - button niesie tez glif ikonowy) i aria-label (nazwa dostepna
-  // w obu wariantach; w ikonowym, ponizej 24rem, jedyna).
+// (rAF, Lenis, klatki still) bez ryzyka polowicznego przelaczenia w locie. Zyje w DWOCH miejscach
+// DOM na raz (pasek .site-nav >= bp.sm i panel .menu__panel < bp.sm, przelaczane wylacznie CSS-em,
+// komponenty.md A7/O1/O11): kazdy pasujacy przycisk dostaje ten sam label i handler.
+(function(){var list=document.querySelectorAll("[data-motion-toggle]");if(!list.length||!hasGL)return;
   var lbl=still?"Włącz ruch":"Zatrzymaj ruch";
-  var txt=b.querySelector(".motion-toggle__text");if(txt)txt.textContent=lbl;
-  b.setAttribute("aria-label",lbl);
-  b.setAttribute("aria-pressed",still?"true":"false");
-  b.addEventListener("click",function(){
-    try{window.localStorage.setItem(MOTION_KEY,still?"on":"off");}catch(e){}
-    window.location.reload();
+  Array.prototype.forEach.call(list,function(b){
+    var txt=b.querySelector(".motion-toggle__text");if(txt)txt.textContent=lbl;
+    b.setAttribute("aria-label",lbl);
+    b.setAttribute("aria-pressed",still?"true":"false");
+    b.addEventListener("click",function(){
+      try{window.localStorage.setItem(MOTION_KEY,still?"on":"off");}catch(e){}
+      window.location.reload();
+    });
   });
+})();
+// Menu mobilny (A8+O11, dyrektywa zalozyciela 2026-07-19; www/ux/sitemap.md). Dziala niezaleznie
+// od WebGL/still: nawigacja nie jest symulacja, wiec nie jest bramkowana hasGL jak toggle wyzej.
+(function(){var det=document.querySelector("[data-menu]");if(!det)return;
+  var trig=det.querySelector("[data-menu-trigger]");var lbl2=trig?trig.querySelector("[data-menu-label]"):null;
+  var panel=det.querySelector("[data-menu-panel]");var scrim=det.querySelector("[data-menu-scrim]");
+  var brand=document.querySelector("[data-menu-brand]");
+  var mainEl=document.getElementById("tresc");var footEl=document.querySelector(".site-footer");
+  if(!trig||!panel)return;
+  var viaLink=false;
+  function setInert(on){[mainEl,footEl].forEach(function(el){if(!el)return;if(on)el.setAttribute("inert","");else el.removeAttribute("inert");});}
+  function setLabel(open){if(lbl2)lbl2.textContent=open?"Zamknij menu":"Menu";}
+  det.open=false;trig.setAttribute("aria-expanded","false");setLabel(false);
+  det.addEventListener("toggle",function(){
+    var open=det.open;trig.setAttribute("aria-expanded",open?"true":"false");setLabel(open);setInert(open);
+    root.classList.toggle("menu-open",open);
+    if(open){var first=panel.querySelector("a");if(first)first.focus();}
+    else{if(!viaLink)trig.focus();viaLink=false;}
+  });
+  if(scrim)scrim.addEventListener("click",function(){det.open=false;});
+  det.addEventListener("keydown",function(e){
+    if(!det.open)return;
+    if(e.key==="Escape"){det.open=false;return;}
+    if(e.key==="Tab"){
+      var items=[trig].concat(Array.prototype.slice.call(panel.querySelectorAll("a,button")));
+      var first=items[0],last=items[items.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    }
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("a"),function(a){a.addEventListener("click",function(){viaLink=true;det.open=false;});});
+  if(brand)brand.addEventListener("click",function(){if(det.open){viaLink=true;det.open=false;}});
 })();
 // Kursor sygnaturowy (dyskretny pierscien; tylko wskaznik precyzyjny, poza trybem zatrzymanym).
 if(finePointer&&!still){
